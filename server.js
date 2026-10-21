@@ -302,7 +302,12 @@ try {
     res.json({ ok: true });
   });
 
-  // Admin CRUD Payment Methods
+ // Admin CRUD Payment Methods
+  app.get("/api/admin/payment-methods", adminAuth, async (req, res) => {
+    const rows = await q("SELECT * FROM payment_methods ORDER BY id ASC");
+    res.json(rows);
+  });
+
   app.post("/api/admin/payment-methods", adminAuth, async (req, res) => {
     const b = req.body;
     await q("INSERT INTO payment_methods (bank_name, account_number, account_holder) VALUES ($1,$2,$3)", [b.bank_name, b.account_number, b.account_holder]);
@@ -321,6 +326,12 @@ try {
   });
 
   // Admin CRUD Testimonials
+  app.get("/api/admin/testimonials", adminAuth, async (req, res) => {
+    const { limit, offset } = pg(req, 10);
+    const rows = await q(`SELECT * FROM testimonials ORDER BY created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`);
+    res.json({ items: rows.slice(0, limit), has_more: rows.length > limit, page: req.query.page || 1 });
+  });
+
   app.post("/api/admin/testimonials", adminAuth, async (req, res) => {
     const b = req.body;
     await q("INSERT INTO testimonials (customer_name, origin, description) VALUES ($1,$2,$3)", [b.customer_name, b.origin, b.description]);
@@ -337,7 +348,6 @@ try {
     await q("DELETE FROM testimonials WHERE id=$1", [parseInt(req.params.id)]);
     res.json({ ok: true });
   });
-
   // ==========================================
   // VIEW ENGINE & STATIC (AMAN UNTUK VERCEL)
   // ==========================================
