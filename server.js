@@ -1,8 +1,7 @@
 require("dotenv").config();
 process.env.TZ = "Asia/Makassar"; 
 const TZ = process.env.TZ;
-if (/^4\./.test(require("express/package.json").version))
-  require("express-async-errors");
+
 
 const path = require("path"),
   crypto = require("crypto");
@@ -557,7 +556,12 @@ app.use((e, req, res, next) => {
   res.status(status).json({ error: msg });
 });
 
-// STANDAR LOCALHOST SERVER
-app.listen(PORT, () => {
-  console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
-});
+if (process.env.VERCEL) {
+  // Jika mendeteksi lingkungan Vercel, wajib diekspor agar tidak error 500
+  module.exports = app;
+} else {
+  // Jika dijalankan di terminal laptop (lokal), gunakan listen biasa
+  app.listen(PORT, () => {
+    console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+  });
+}
