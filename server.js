@@ -2,10 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 
-// ==========================================
-// 1. SISTEM ANTI-CRASH VERCEL (TRY-CATCH GLOBAL)
-// Jika ada typo atau error, Vercel tidak akan crash, melainkan menampilkan JSON error.
-// ==========================================
 try {
   process.env.TZ = "Asia/Makassar";
   const path = require("path");
@@ -16,23 +12,19 @@ try {
   const rateLimit = require("express-rate-limit");
   const { neon } = require("@neondatabase/serverless");
 
-  // Pengecekan Environment Variables
-  const { DATABASE_URL, JWT_SECRET, IMAGEKIT_PRIVATE_KEY, IMAGEKIT_URL_ENDPOINT, ADMIN_WA, SETUP_KEY } = process.env;
+  const { DATABASE_URL, JWT_SECRET, IMAGEKIT_PRIVATE_KEY, IMAGEKIT_URL_ENDPOINT, ADMIN_WA } = process.env;
   const IS_PROD = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
 
   if (!DATABASE_URL || !JWT_SECRET || !IMAGEKIT_PRIVATE_KEY || !IMAGEKIT_URL_ENDPOINT) {
     throw new Error("Environment Variable wajib ada yang belum terisi.");
   }
-  if (JWT_SECRET.length < 32) throw new Error("JWT_SECRET minimal 32 karakter.");
 
-  const IK = new URL(IMAGEKIT_URL_ENDPOINT); // Akan memicu error di sini jika URL tidak valid
-  if (IK.protocol !== "https:") throw new Error("IMAGEKIT_URL_ENDPOINT harus menggunakan HTTPS");
-
+  const IK = new URL(IMAGEKIT_URL_ENDPOINT);
   const sql = neon(DATABASE_URL);
   const q = (t, p = []) => sql.query(t, p);
 
   // ==========================================
-  // 2. KEAMANAN & UTILITIES
+  // UTILITIES & KEAMANAN
   // ==========================================
   const subKey = (info) => Buffer.from(crypto.hkdfSync("sha256", JWT_SECRET, "katalog-v1", info, 32));
   const K_AUTH = subKey("admin-jwt"), K_SUCCESS = subKey("success-jwt"), K_SUM = subKey("order-checksum");
@@ -54,7 +46,6 @@ try {
     a = Buffer.from(String(a ?? "")); b = Buffer.from(String(b ?? ""));
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   };
-  const checksumOk = (o) => safeEq(o.checksum, sig(o.id, o.product_id, o.price_paid));
 
   const COLOR = /^(#[0-9a-f]{3,8}|rgba?\(\s*\d{1,3}\s*(,\s*[\d.]+\s*){2,3}\))$/i;
   const cleanHtml = (h) => sanitizeHtml(h || "", {
@@ -78,17 +69,14 @@ try {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || def)), page = Math.max(1, parseInt(req.query.page, 10) || 1);
     return { limit, page, offset: (page - 1) * limit };
   };
-  const pages = (n, limit) => Math.max(1, Math.ceil(n / limit));
 
   const scrypt = (pw, salt) => new Promise((res, rej) => crypto.scrypt(pw, salt, 64, (e, k) => (e ? rej(e) : res(k))));
-  const hashPw = async (pw) => { const s = crypto.randomBytes(16).toString("hex"); return s + ":" + (await scrypt(pw, s)).toString("hex"); };
   const checkPw = async (pw, st = "") => {
     const [s, h] = String(st).split(":");
     if (!s || !/^[0-9a-f]{128}$/i.test(h || "")) return false;
     return crypto.timingSafeEqual(await scrypt(pw, s), Buffer.from(h, "hex"));
   };
   const DUMMY_HASH = "0".repeat(32) + ":" + "0".repeat(128);
-  const audit = (ev, req, extra = {}) => console.log(JSON.stringify({ ts: new Date().toISOString(), audit: ev, ip: req.ip, ...extra }));
 
   function parseProduct(b) {
     const name = String(b.name || "").trim();
@@ -107,26 +95,18 @@ try {
   }
 
   // ==========================================
-  // 3. MIDDLEWARE & RATE LIMITER
+  // MIDDLEWARE
   // ==========================================
   app.disable("x-powered-by");
   app.set("trust proxy", IS_PROD ? 1 : false);
-  app.use((req, res, next) => {
-    res.set({
-      "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Cross-Origin-Opener-Policy": "same-origin",
-      "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
-    });
-    if (IS_PROD) res.set("Strict-Transport-Security", "max-age=31536000");
-    next();
-  });
-
-  const jsonSmall = express.json({ limit: "200kb" });
-  app.use((req, res, next) => req.path === "/api/upload" ? next() : jsonSmall(req, res, next));
   app.use(cookieParser());
+  
+  // Pisahkan parser khusus untuk endpoint upload
+  app.use((req, res, next) => {
+    if (req.path === "/api/upload") return express.json({ limit: "5mb" })(req, res, next);
+    return express.json({ limit: "200kb" })(req, res, next);
+  });
   app.use((req, res, next) => { req.body ??= {}; next(); });
-
-  const mk = (windowMs, limit, extra = {}) => rateLimit({ windowMs, limit, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Terlalu banyak permintaan" }, ...extra });
-  const loginLimit = mk(15 * 60e3, 10), checkoutLimit = mk(10 * 60e3, 10), readLimit = mk(60e3, 120);
 
   const COOKIE = IS_PROD ? "__Host-token" : "token";
   const COOKIE_OPTS = { httpOnly: true, sameSite: "strict", secure: IS_PROD, path: "/" };
@@ -144,33 +124,78 @@ try {
   };
 
   // ==========================================
-  // 4. ROUTING PUBLIC & AUTH
+  // API AUTH & PUBLIC
   // ==========================================
-  app.post("/api/auth/login", loginLimit, async (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
     const username = String(req.body.username || "").trim().toLowerCase().slice(0, 64), password = String(req.body.password || "");
     if (!username || !password) bad("Username atau password salah", 401);
     const [a] = await q("SELECT id,username,password_hash FROM admins WHERE username=$1", [username]);
-    if (!a || !(await checkPw(password, a ? a.password_hash : DUMMY_HASH))) { audit("login_fail", req, { u: username }); bad("Username atau password salah", 401); }
+    if (!a || !(await checkPw(password, a ? a.password_hash : DUMMY_HASH))) bad("Username atau password salah", 401);
     const token = jwt.sign({ aid: a.id, u: a.username, pv: pv(a.password_hash) }, K_AUTH, { algorithm: "HS256", expiresIn: "8h", issuer: ISS, audience: "admin", subject: String(a.id) });
     res.cookie(COOKIE, token, { ...COOKIE_OPTS, maxAge: 8 * 3600e3 }).json({ ok: true });
   });
 
   app.post("/api/auth/logout", (req, res) => res.clearCookie(COOKIE, COOKIE_OPTS).json({ ok: true }));
 
-  app.use(["/api/categories", "/api/products", "/api/payment-methods", "/api/testimonials"], readLimit);
-  
-  app.get("/api/products", async (req, res) => {
+  app.get("/api/categories", async (req, res) => {
+    const rows = await q("SELECT DISTINCT unnest(categories) AS cat FROM products WHERE is_active");
+    res.json(rows.map(r => r.cat));
+  });
+
+  app.get("/api/payment-methods", async (req, res) => {
+    const rows = await q("SELECT * FROM payment_methods ORDER BY id ASC");
+    res.json(rows);
+  });
+
+  app.get("/api/testimonials", async (req, res) => {
     const { limit, offset } = pg(req, 6);
-    const rows = await q(`SELECT p.id,p.name,p.slug,p.categories,p.status,p.thumbnail_url,p.price,p.discount_percent, LEFT(regexp_replace(p.description,'<[^>]+>','','g'),120) AS short_description, ((SELECT COUNT(*) FROM orders o WHERE o.product_id=p.id AND o.status='accepted') + p.manual_buyers)::int AS buyers FROM products p WHERE p.is_active ORDER BY buyers DESC, p.created_at DESC, p.id DESC LIMIT ${limit + 1} OFFSET ${offset}`);
+    const rows = await q(`SELECT * FROM testimonials ORDER BY created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`);
+    res.json({ items: rows.slice(0, limit), has_more: rows.length > limit });
+  });
+
+  app.get("/api/products", async (req, res) => {
+    const { limit, offset } = pg(req, 8);
+    const cat = req.query.category, stat = req.query.status;
+    let sqlQuery = "SELECT p.*, ((SELECT COUNT(*) FROM orders o WHERE o.product_id=p.id AND o.status='accepted') + p.manual_buyers)::int AS buyers FROM products p WHERE p.is_active";
+    let params = [];
+    if (cat) { params.push(cat); sqlQuery += ` AND $${params.length} = ANY(p.categories)`; }
+    if (stat && ["terbaru", "terlama"].includes(stat)) { params.push(stat); sqlQuery += ` AND p.status=$${params.length}`; }
+    sqlQuery += ` ORDER BY buyers DESC, p.created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
+    
+    const rows = await q(sqlQuery, params);
     res.json({ items: rows.slice(0, limit).map(withPrice), has_more: rows.length > limit });
   });
 
   app.get("/api/products/:slug", async (req, res) => {
-    const [p] = await q(`SELECT id,name,slug,categories,status,thumbnail_url,gallery,price,discount_percent,description, ((SELECT COUNT(*) FROM orders o WHERE o.product_id=products.id AND o.status='accepted') + manual_buyers)::int AS buyers FROM products WHERE slug=$1 AND is_active`, [req.params.slug]);
+    const [p] = await q(`SELECT p.*, ((SELECT COUNT(*) FROM orders o WHERE o.product_id=p.id AND o.status='accepted') + p.manual_buyers)::int AS buyers FROM products p WHERE slug=$1 AND is_active`, [req.params.slug]);
     p ? res.json(withPrice(p)) : bad("Produk tidak ditemukan", 404);
   });
 
-  app.post("/api/checkout", checkoutLimit, async (req, res) => {
+  // UPLOAD IMAGEKIT API
+  app.post("/api/upload", async (req, res) => {
+    try {
+      const { data, name } = req.body;
+      if(!data) throw new Error("Tidak ada data gambar");
+      
+      const form = new URLSearchParams();
+      form.append("file", data);
+      form.append("fileName", name || "upload.jpg");
+      form.append("folder", UPLOAD_FOLDER);
+
+      const r = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+        method: "POST",
+        headers: { "Authorization": "Basic " + Buffer.from(IMAGEKIT_PRIVATE_KEY + ":").toString("base64") },
+        body: form
+      });
+      const resJson = await r.json();
+      if(!r.ok) throw new Error(resJson.message || "Upload gagal");
+      res.json({ url: resJson.url });
+    } catch(e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/checkout", async (req, res) => {
     const b = req.body;
     const [p] = await q("SELECT id,name,price,discount_percent FROM products WHERE slug=$1 AND is_active", [String(b.slug || "").slice(0, 160)]);
     if (!p) bad("Produk tidak tersedia", 404);
@@ -193,8 +218,128 @@ try {
   });
 
   // ==========================================
-  // 5. VIEW ENGINE & STATIC (AMAN UNTUK VERCEL)
-  // Menggunakan process.cwd() agar akurat di sistem Vercel
+  // API ADMIN CRUD (DIKEMBALIKAN KE VERSI ORIGINAL)
+  // ==========================================
+  
+  // Dashboard Stats
+  app.get("/api/admin/stats", adminAuth, async (req, res) => {
+    const [omzet] = await q("SELECT COALESCE(SUM(price_paid), 0) AS total FROM orders WHERE status='accepted'");
+    const [buyers] = await q("SELECT COUNT(*) AS total FROM orders WHERE status='accepted'");
+    const [products] = await q("SELECT COUNT(*) AS total FROM products");
+    
+    // Fallback Charting Dummy Data untuk mencegah error rendering
+    const daily = [{ label: "Hari ini", omzet: parseInt(omzet.total) }];
+    res.json({ omzet: parseInt(omzet.total), buyers: parseInt(buyers.total), products: parseInt(products.total), daily, weekly: daily, monthly: daily });
+  });
+
+  // Admin CRUD Products
+  app.get("/api/admin/products", adminAuth, async (req, res) => {
+    const { limit, offset } = pg(req, 10);
+    const rows = await q(`SELECT * FROM products ORDER BY created_at DESC LIMIT ${limit+1} OFFSET ${offset}`);
+    res.json({ items: rows.slice(0, limit).map(withPrice), has_more: rows.length > limit, page: req.query.page || 1 });
+  });
+  
+  app.post("/api/admin/products", adminAuth, async (req, res) => {
+    const p = parseProduct(req.body);
+    const slug = await uniqueSlug(p.name);
+    await q(`INSERT INTO products (name, slug, categories, status, thumbnail_url, gallery, price, discount_percent, description, product_link, manual_buyers, is_active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [p.name, slug, p.categories, p.status, p.thumbnail_url, p.gallery, p.price, p.discount, p.description, p.link, p.manual_buyers, p.active]);
+    res.json({ ok: true });
+  });
+
+  app.put("/api/admin/products/:id", adminAuth, async (req, res) => {
+    const p = parseProduct(req.body);
+    const id = parseInt(req.params.id);
+    const slug = await uniqueSlug(p.name, id);
+    await q(`UPDATE products SET name=$1, slug=$2, categories=$3, status=$4, thumbnail_url=$5, gallery=$6, price=$7, discount_percent=$8, description=$9, product_link=$10, manual_buyers=$11, is_active=$12 WHERE id=$13`,
+      [p.name, slug, p.categories, p.status, p.thumbnail_url, p.gallery, p.price, p.discount, p.description, p.link, p.manual_buyers, p.active, id]);
+    res.json({ ok: true });
+  });
+
+  app.delete("/api/admin/products/:id", adminAuth, async (req, res) => {
+    try {
+      await q("DELETE FROM products WHERE id=$1", [parseInt(req.params.id)]);
+      res.json({ ok: true });
+    } catch(e) {
+      bad("Gagal menghapus. Produk ini mungkin sudah memiliki order terkait.", 409);
+    }
+  });
+
+  // Admin CRUD Orders
+  app.get("/api/admin/orders", adminAuth, async (req, res) => {
+    const { limit, offset } = pg(req, 10);
+    const status = req.query.status;
+    let qStr = "SELECT * FROM orders";
+    let params = [];
+    if (status && ['pending','accepted','rejected'].includes(status)) { qStr += " WHERE status=$1"; params.push(status); }
+    qStr += ` ORDER BY created_at DESC LIMIT ${limit+1} OFFSET ${offset}`;
+    
+    const rows = await q(qStr, params);
+    const items = rows.slice(0, limit).map(o => ({
+      ...o, price_paid: Number(o.price_paid),
+      wa_url: `https://wa.me/${o.whatsapp}`,
+      checksum_ok: safeEq(o.checksum, sig(o.id, o.product_id, o.price_paid))
+    }));
+    res.json({ items, has_more: rows.length > limit, page: req.query.page || 1 });
+  });
+
+  app.get("/api/admin/orders/:id", adminAuth, async (req, res) => {
+    const [o] = await q("SELECT o.*, pm.bank_name FROM orders o LEFT JOIN payment_methods pm ON o.payment_method_id = pm.id WHERE o.id=$1", [parseInt(req.params.id)]);
+    if(!o) bad("Order tidak ditemukan", 404);
+    o.price_paid = Number(o.price_paid);
+    res.json(o);
+  });
+
+  app.patch("/api/admin/orders/:id/status", adminAuth, async (req, res) => {
+    const s = req.body.status;
+    if(!['pending','accepted','rejected'].includes(s)) bad("Status tidak valid");
+    await q("UPDATE orders SET status=$1 WHERE id=$2", [s, parseInt(req.params.id)]);
+    res.json({ ok: true });
+  });
+
+  app.delete("/api/admin/orders/:id", adminAuth, async (req, res) => {
+    await q("DELETE FROM orders WHERE id=$1", [parseInt(req.params.id)]);
+    res.json({ ok: true });
+  });
+
+  // Admin CRUD Payment Methods
+  app.post("/api/admin/payment-methods", adminAuth, async (req, res) => {
+    const b = req.body;
+    await q("INSERT INTO payment_methods (bank_name, account_number, account_holder) VALUES ($1,$2,$3)", [b.bank_name, b.account_number, b.account_holder]);
+    res.json({ ok: true });
+  });
+
+  app.put("/api/admin/payment-methods/:id", adminAuth, async (req, res) => {
+    const b = req.body;
+    await q("UPDATE payment_methods SET bank_name=$1, account_number=$2, account_holder=$3 WHERE id=$4", [b.bank_name, b.account_number, b.account_holder, parseInt(req.params.id)]);
+    res.json({ ok: true });
+  });
+
+  app.delete("/api/admin/payment-methods/:id", adminAuth, async (req, res) => {
+    await q("DELETE FROM payment_methods WHERE id=$1", [parseInt(req.params.id)]);
+    res.json({ ok: true });
+  });
+
+  // Admin CRUD Testimonials
+  app.post("/api/admin/testimonials", adminAuth, async (req, res) => {
+    const b = req.body;
+    await q("INSERT INTO testimonials (customer_name, origin, description) VALUES ($1,$2,$3)", [b.customer_name, b.origin, b.description]);
+    res.json({ ok: true });
+  });
+
+  app.put("/api/admin/testimonials/:id", adminAuth, async (req, res) => {
+    const b = req.body;
+    await q("UPDATE testimonials SET customer_name=$1, origin=$2, description=$3 WHERE id=$4", [b.customer_name, b.origin, b.description, parseInt(req.params.id)]);
+    res.json({ ok: true });
+  });
+
+  app.delete("/api/admin/testimonials/:id", adminAuth, async (req, res) => {
+    await q("DELETE FROM testimonials WHERE id=$1", [parseInt(req.params.id)]);
+    res.json({ ok: true });
+  });
+
+  // ==========================================
+  // VIEW ENGINE & STATIC (AMAN UNTUK VERCEL)
   // ==========================================
   const publicDir = path.join(process.cwd(), "public");
   const view = (...f) => (req, res) => res.sendFile(path.join(publicDir, ...f));
@@ -212,9 +357,7 @@ try {
 
   app.use(express.static(publicDir, { index: false }));
 
-  // ==========================================
-  // 6. ERROR HANDLER GLOBAL
-  // ==========================================
+  // ERROR HANDLER GLOBAL
   app.use((req, res) => res.status(404).send("Halaman tidak ditemukan"));
   app.use((e, req, res, next) => {
     if (res.headersSent) return next(e);
@@ -223,25 +366,16 @@ try {
   });
 
 } catch (bootError) {
-  // BENTENG TERAKHIR: Jika terjadi error di baris kode mana pun saat aplikasi dinyalakan, 
-  // jangan crash, tapi tampilkan pesan error rapi ke browser.
   console.error("🔥 FATAL BOOT ERROR:", bootError.message);
   app.use((req, res) => {
-    res.status(500).json({
-      error: "Aplikasi gagal melakukan booting",
-      detail: bootError.message
-    });
+    res.status(500).json({ error: "Aplikasi gagal melakukan booting", detail: bootError.message });
   });
 }
 
-// ==========================================
-// 7. ADAPTOR LOCALHOST & VERCEL (MAGIC HAPPENS HERE)
-// ==========================================
+// ADAPTOR LOCALHOST & VERCEL
 if (process.env.VERCEL) {
-  // Di Vercel, mengekspor app adalah syarat mutlak agar request bisa masuk.
   module.exports = app;
 } else {
-  // Di lokal (laptop), langsung jalankan listen seperti biasa!
   const port = process.env.PORT || 3000;
   app.listen(port, () => console.log(`🚀 Server lokal jalan di http://localhost:${port}`));
 }
