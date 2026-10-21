@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+  <body
+    class="bg-sky-50 min-h-screen flex items-center justify-center p-4 text-slate-700"
+  >
+    <div
+      class="w-full max-w-sm bg-white rounded-2xl border border-sky-100 shadow-sm p-6"
+    >
+      <h1 class="text-xl font-extrabold text-sky-900">Admin Login</h1>
+      <p class="text-sm text-slate-500 mb-4">Masuk untuk mengelola katalog.</p>
+      <div
+        id="err"
+        class="hidden mb-3 bg-rose-50 text-rose-600 text-sm rounded-xl px-3 py-2"
+      ></div>
+      <form id="f" class="space-y-3">
+        <input
+          id="u"
+          required
+          autocomplete="username"
+          placeholder="Username"
+          class="w-full border border-sky-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+        />
+        <div class="relative">
+          <input
+            id="p"
+            type="password"
+            required
+            autocomplete="current-password"
+            placeholder="Password"
+            class="w-full border border-sky-200 rounded-xl px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+          /><button
+            type="button"
+            id="t"
+            class="absolute right-3 top-2.5 text-slate-400"
+          >
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+        <button
+          id="b"
+          class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-xl py-2.5 disabled:opacity-50"
+        >
+          Masuk
+        </button>
+      </form>
+    </div>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      $("t").onclick = () => {
+        const s = $("p").type === "password";
+        $("p").type = s ? "text" : "password";
+        $("t").firstChild.className =
+          "fa-solid " + (s ? "fa-eye-slash" : "fa-eye");
+      };
+      $("f").onsubmit = async (e) => {
+        e.preventDefault();
+        $("err").classList.add("hidden");
+        $("b").disabled = true;
+        try {
+          const r = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: $("u").value,
+              password: $("p").value,
+            }),
+          });
+          const j = await r
+            .json()
+            .catch(() => ({
+              error: "Terlalu banyak percobaan, coba lagi nanti",
+            }));
+          if (!r.ok) throw new Error(j.error);
+          location.href = "/dashboard";
+        } catch (x) {
+          $("err").textContent = x.message || "Gagal login";
+          $("err").classList.remove("hidden");
+          $("b").disabled = false;
+        }
+      };
+    </script>
+  </body>
+</html>

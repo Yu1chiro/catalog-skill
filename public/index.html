@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <title>Catalog Skill</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet" />
+    <style>
+      body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+  </head>
+  <body class="bg-slate-100 md:bg-sky-50/50 text-slate-700 antialiased selection:bg-sky-200 min-h-screen">
+    
+    <!-- Responsive Wrapper Container -->
+    <div class="max-w-md md:max-w-5xl mx-auto bg-white min-h-screen md:min-h-[92vh] md:my-6 md:rounded-3xl shadow-2xl shadow-sky-900/10 relative flex flex-col pb-10 overflow-hidden border border-sky-50">
+      
+      <!-- Top App Bar -->
+      <header class="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-sky-50 shadow-sm">
+        <div class="px-5 py-4 flex items-center justify-between md:px-8 md:py-5">
+          <div>
+            <h1 class="text-xl md:text-2xl font-extrabold text-sky-900 tracking-tight">Catalog Skill</h1>
+            <p class="text-[11px] md:text-xs text-slate-500 font-medium mt-0.5">Kumpulan skill digital & modul praktis siap pakai</p>
+          </div>
+          <div class="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-sky-100 to-sky-50 text-sky-600 flex items-center justify-center text-lg md:text-xl shadow-inner shrink-0">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="flex gap-3 px-5 py-3 md:px-8 bg-slate-50/60 border-t border-sky-50">
+          <select id="fCat" class="flex-1 bg-white border border-sky-100 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-sky-900 focus:outline-none focus:ring-2 focus:ring-sky-300 shadow-sm appearance-none cursor-pointer">
+            <option value="">Semua Kategori</option>
+          </select>
+          <select id="fStatus" class="flex-1 bg-white border border-sky-100 rounded-xl px-3 py-2.5 text-xs md:text-sm font-semibold text-sky-900 focus:outline-none focus:ring-2 focus:ring-sky-300 shadow-sm appearance-none cursor-pointer">
+            <option value="">Terbaru & Lama</option>
+            <option value="terbaru">Terbaru</option>
+            <option value="terlama">Terlama</option>
+          </select>
+        </div>
+      </header>
+
+      <main class="flex-1 px-4 py-5 md:px-8 md:py-7">
+        <!-- Adaptive Grid: 2 Kolom di Mobile, 3 Kolom di Tablet, 4 Kolom di Desktop -->
+        <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5"></div>
+        
+        <p id="empty" class="hidden text-center text-slate-400 py-16 text-sm font-medium">Belum ada produk pada filter ini.</p>
+        
+        <div class="text-center mt-8">
+          <button id="moreP" class="hidden w-full md:w-auto md:px-10 bg-sky-50 text-sky-700 border border-sky-100 hover:bg-sky-100 text-xs md:text-sm font-bold rounded-xl py-3.5 transition disabled:opacity-50">
+            Muat Lebih Banyak
+          </button>
+        </div>
+        
+        <!-- Testimonials Section -->
+        <section id="testi" class="hidden mt-12 mb-4">
+          <h2 class="text-sm md:text-base font-extrabold text-sky-900 mb-4 px-1">Ulasan Pelanggan</h2>
+          <div id="tGrid" class="flex md:grid md:grid-cols-3 gap-3.5 overflow-x-auto pb-4 md:pb-0 scrollbar-hide snap-x"></div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;","<": "&lt;",">": "&gt;",'"': "&quot;","'": "&#39;"})[c]);
+      const rp = (n) => "Rp" + Number(n).toLocaleString("id-ID");
+      
+      async function loadCategories() {
+        try {
+          const cats = await (await fetch("/api/categories")).json();
+          cats.forEach((c) => $("fCat").insertAdjacentHTML("beforeend", `<option value="${esc(c)}">${esc(c)}</option>`));
+        } catch(e) {}
+      }
+      
+      let off = 0;
+      async function loadProducts(more = false) {
+        if (!more) { off = 0; $("grid").innerHTML = ""; }
+        const btn = $("moreP");
+        btn.disabled = true; btn.textContent = "Memuat...";
+        try {
+          const qs = new URLSearchParams({ category: $("fCat").value, status: $("fStatus").value, limit: 8, offset: off });
+          const d = await (await fetch("/api/products?" + qs)).json(), list = d.items || [];
+          off += list.length;
+          $("empty").classList.toggle("hidden", off > 0);
+          btn.classList.toggle("hidden", !d.has_more);
+          
+          $("grid").insertAdjacentHTML("beforeend", list.map((p) => `
+            <article class="bg-white rounded-2xl border border-sky-100 overflow-hidden flex flex-col shadow-sm pb-3 transition-transform hover:-translate-y-1 hover:shadow-md">
+              <!-- Portrait 4:5 Ratio Container -->
+              <div class="w-full aspect-[4/5] bg-sky-50/50 p-2 flex items-center justify-center overflow-hidden">
+                <img src="${esc(p.thumbnail_url)}" alt="${esc(p.name)}" loading="lazy" class="w-full h-full object-contain rounded-xl">
+              </div>
+              <div class="px-3 pt-3 flex flex-col gap-1 flex-1">
+                <h2 class="font-bold text-sky-900 text-xs md:text-sm leading-snug line-clamp-2">${esc(p.name)}</h2>
+                ${p.buyers > 0 ? `<p class="text-[10px] md:text-xs text-emerald-600 font-medium mt-0.5"><i class="fa-solid fa-users mr-1"></i>${p.buyers} terjual</p>` : ""}
+                <div class="mt-auto pt-2">
+                  ${p.discount_percent > 0 ? `<div class="flex items-center gap-1 mb-0.5"><span class="text-[10px] md:text-xs text-slate-400 line-through">${rp(p.price)}</span><span class="text-[9px] md:text-[10px] bg-rose-100 text-rose-600 font-bold rounded px-1">-${p.discount_percent}%</span></div>` : ""}
+                  <p class="text-sm md:text-base font-extrabold text-sky-700">${rp(p.final_price)}</p>
+                </div>
+                <a href="/product/${encodeURIComponent(p.slug)}" class="mt-3 block text-center bg-sky-500 hover:bg-sky-600 text-white text-[11px] md:text-xs font-bold rounded-xl py-2.5 transition shadow-sm shadow-sky-200">Detail Produk</a>
+              </div>
+            </article>`).join(""));
+        } catch (e) {
+          $("empty").textContent = "Gagal memuat produk."; $("empty").classList.remove("hidden");
+        }
+        btn.disabled = false; btn.textContent = "Muat Lebih Banyak";
+      }
+      
+      $("fCat").onchange = $("fStatus").onchange = () => loadProducts();
+      $("moreP").onclick = () => loadProducts(true);
+      
+      let tOff = 0;
+      async function loadTestimonials() {
+        try {
+          const d = await (await fetch("/api/testimonials?limit=6&offset=" + tOff)).json(), list = d.items || [];
+          tOff += list.length;
+          $("testi").classList.toggle("hidden", tOff === 0);
+          $("tGrid").insertAdjacentHTML("beforeend", list.map((t) => `
+            <article class="bg-white rounded-2xl border border-sky-100 p-4 shadow-sm min-w-[240px] md:min-w-0 snap-center flex flex-col">
+              <p class="text-[11px] md:text-xs text-slate-600 italic mb-3 flex-1">"${esc(t.description)}"</p>
+              <div class="mt-auto border-t border-sky-50 pt-2">
+                <p class="text-xs font-bold text-sky-900">${esc(t.customer_name)}</p>
+                <p class="text-[10px] text-slate-400"><i class="fa-solid fa-location-dot mr-1 text-sky-500"></i>${esc(t.origin)}</p>
+              </div>
+            </article>`).join(""));
+        } catch (e) {}
+      }
+      
+      loadCategories(); loadProducts(); loadTestimonials();
+    </script>
+  </body>
+</html>
