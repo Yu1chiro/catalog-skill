@@ -3,130 +3,83 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Status Pembayaran</title>
+    <title>Pemesanan Berhasil - Solusi Rumahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; }</style>
     <script>
       const $ = (s, r = document) => r.querySelector(s);
-      const esc = (s) =>
-        String(s ?? "").replace(
-          /[&<>"']/g,
-          (c) =>
-            ({
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;",
-            })[c],
-        );
+      const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;","<": "&lt;",">": "&gt;",'"': "&quot;","'": "&#39;"})[c]);
       const rp = (n) => "Rp" + Number(n).toLocaleString("id-ID");
-      const C = {
-        inp: "w-full border border-sky-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white",
-        btn: "bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl px-4 py-2 transition disabled:opacity-50",
-        ghost:
-          "border border-sky-200 text-sky-700 hover:bg-sky-50 text-xs rounded-lg px-3 py-1.5 disabled:opacity-40",
-        card: "bg-white rounded-2xl border border-sky-100 shadow-sm",
-        err: "hidden mb-3 bg-rose-50 text-rose-600 text-sm rounded-xl px-3 py-2",
-      };
-      function toast(m, ok = true) {
-        const t = document.createElement("div");
-        t.className = `fixed top-4 right-4 z-[70] max-w-xs px-4 py-3 rounded-xl text-sm text-white shadow-lg ${ok ? "bg-emerald-500" : "bg-rose-500"}`;
-        t.textContent = m;
-        document.body.append(t);
-        setTimeout(() => t.remove(), 3500);
-      }
-      function modal(html, wide) {
-        const o = document.createElement("div");
-        o.className =
-          "fixed inset-0 z-50 bg-slate-900/40 flex items-end sm:items-center justify-center sm:p-4";
-        o.innerHTML = `<div class="bg-white w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-md"} max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5">${html}</div>`;
-        document.body.append(o);
-        o.addEventListener("mousedown", (e) => {
-          if (e.target === o) o.remove();
-        });
-        return o;
-      }
-      const showErr = (m, msg) => {
-        const e = $("[data-er]", m);
-        e.textContent = msg;
-        e.classList.remove("hidden");
-      };
-      function compress(file, max = 1600) {
-        return new Promise((ok, no) => {
-          const img = new Image();
-          img.onload = () => {
-            const k = Math.min(1, max / Math.max(img.width, img.height)),
-              c = document.createElement("canvas");
-            c.width = Math.round(img.width * k);
-            c.height = Math.round(img.height * k);
-            c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-            let q = 0.9,
-              d;
-            do {
-              d = c.toDataURL("image/jpeg", q);
-              q -= 0.1;
-            } while (d.length > 2.6e6 && q > 0.2);
-            d.length > 2.9e6 ? no(new Error("Gambar terlalu besar")) : ok(d);
-          };
-          img.onerror = () => no(new Error("File bukan gambar valid"));
-          img.src = URL.createObjectURL(file);
-        });
-      }
-      async function uploadImage(file) {
-        if (!/^image\/(png|jpe?g|webp)$/.test(file.type))
-          throw new Error("Hanya PNG/JPG/WEBP");
-        const data = await compress(file);
-        const r = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data, name: file.name }),
-        });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.error || "Upload gagal");
-        return j.url;
-      }
     </script>
   </head>
-  <body
-    class="bg-sky-50 text-slate-700 min-h-screen flex items-center justify-center p-4"
-  >
-    <div
-      id="box"
-      class="w-full max-w-md bg-white rounded-2xl border border-sky-100 shadow-sm p-6 text-center"
-    >
-      <p class="text-slate-400">Memuat…</p>
+  <body class="bg-slate-50 md:bg-emerald-50/60 text-slate-800 min-h-screen flex items-center justify-center p-5 font-medium">
+    
+    <div id="box" class="w-full max-w-md bg-white rounded-3xl border border-emerald-100 shadow-xl p-8 text-center relative overflow-hidden">
+      <!-- Loading State -->
+      <div class="animate-pulse">
+        <div class="w-20 h-20 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-3xl"></i>
+        </div>
+        <p class="text-slate-500 font-bold">Memeriksa data pesanan Anda...</p>
+      </div>
     </div>
+
     <script>
       const t = new URLSearchParams(location.search).get("t") || "";
       history.replaceState(null, "", location.pathname);
+      
       (async () => {
         const box = $("#box");
         try {
-          const r = await fetch("/api/success?t=" + encodeURIComponent(t)),
-            o = await r.json();
+          const r = await fetch("/api/success?t=" + encodeURIComponent(t)), o = await r.json();
           if (!r.ok) throw new Error(o.error);
-          box.innerHTML = `<div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mb-3"><i class="fa-solid fa-check"></i></div>
-  <h1 class="text-xl font-extrabold text-sky-900">Order berhasil dibuat</h1>
-  <dl class="text-sm text-left my-4 space-y-1">${[
-    ["No. order", "#" + o.order_id],
-    ["Produk", o.product_name],
-    ["Harga", rp(o.price_paid)],
-    ["Nama", o.buyer_name],
-  ]
-    .map(
-      ([k, v]) =>
-        `<div class="flex justify-between gap-3"><dt class="text-slate-500">${k}</dt><dd class="font-semibold text-right">${esc(v)}</dd></div>`,
-    )
-    .join("")}</dl>
-  <p class="text-sm bg-amber-50 text-amber-700 rounded-xl p-3 mb-4">Pembayaran Anda menunggu verifikasi admin.</p>
-  <a href="${esc(o.wa_url)}" target="_blank" rel="noopener" class="block bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl py-2.5 mb-2"><i class="fa-brands fa-whatsapp mr-1"></i>Konfirmasi via WhatsApp</a>
-  <a href="/" class="block border border-sky-200 text-sky-700 rounded-xl py-2.5">Kembali ke beranda</a>`;
+          
+          box.innerHTML = `
+            <div class="w-20 h-20 mx-auto rounded-full bg-teal-100 text-teal-600 flex items-center justify-center text-4xl mb-5 shadow-inner">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <h1 class="text-2xl font-black text-emerald-950 mb-2">Terima Kasih!</h1>
+            <p class="text-slate-600 text-sm mb-6">Pesanan Anda telah kami terima dengan baik.</p>
+            
+            <div class="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-5 mb-6">
+              <dl class="text-sm text-left space-y-3">
+                ${[
+                  ["No. Pesanan", "<span class='font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded'>#" + o.order_id + "</span>"],
+                  ["Nama Produk", esc(o.product_name)],
+                  ["Total Dibayar", "<span class='text-emerald-700 text-base'>" + rp(o.price_paid) + "</span>"],
+                  ["Nama Anda", esc(o.buyer_name)],
+                ].map(([k, v]) => `
+                  <div class="flex justify-between items-center gap-3 border-b border-emerald-100/50 pb-2 last:border-0 last:pb-0">
+                    <dt class="text-slate-500 font-bold">${k}</dt>
+                    <dd class="font-black text-right text-emerald-950">${v}</dd>
+                  </div>
+                `).join("")}
+              </dl>
+            </div>
+            
+            <p class="text-sm bg-amber-50 text-amber-800 font-bold border border-amber-200 rounded-xl p-4 mb-6 leading-relaxed shadow-sm">
+              <i class="fa-solid fa-bell text-amber-500 mr-1.5"></i> Mohon klik tombol di bawah ini agar pesanan Anda segera kami proses dan kirimkan.
+            </p>
+            
+            <a href="${esc(o.wa_url)}" target="_blank" rel="noopener" class="block bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base rounded-2xl py-4 mb-3 shadow-lg shadow-emerald-200 transition">
+              <i class="fa-brands fa-whatsapp mr-2 text-xl align-middle"></i> Konfirmasi ke WhatsApp Kami
+            </a>
+            
+            <a href="/" class="block bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-800 font-bold rounded-2xl py-3.5 transition">
+              Kembali ke Beranda
+            </a>
+          `;
         } catch (e) {
-          box.innerHTML = `<div class="w-16 h-16 mx-auto rounded-full bg-rose-100 text-rose-500 flex items-center justify-center text-3xl mb-3"><i class="fa-solid fa-lock"></i></div><h1 class="text-xl font-extrabold text-sky-900 mb-1">Akses tidak valid</h1><p class="text-sm text-slate-500 mb-4">${esc(e.message)}</p><a href="/" class="block bg-sky-500 text-white font-semibold rounded-xl py-2.5">Kembali</a>`;
+          box.innerHTML = `
+            <div class="w-20 h-20 mx-auto rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-4xl mb-5 border-4 border-white shadow-sm">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <h1 class="text-xl font-black text-emerald-950 mb-2">Informasi Tidak Tersedia</h1>
+            <p class="text-sm text-slate-500 font-medium mb-8 bg-slate-50 p-4 rounded-xl border border-slate-100">${esc(e.message)}</p>
+            <a href="/" class="block bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl py-4 transition shadow-md shadow-emerald-200">Kembali ke Beranda</a>
+          `;
         }
       })();
     </script>

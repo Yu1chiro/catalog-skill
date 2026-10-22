@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <title>Detail Produk</title>
+    <title>Detail Produk - Solusi Rumahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
       body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
       .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -17,26 +17,27 @@
       const $ = (s, r = document) => r.querySelector(s);
       const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;","<": "&lt;",">": "&gt;",'"': "&quot;","'": "&#39;"})[c]);
       const rp = (n) => "Rp" + Number(n).toLocaleString("id-ID");
+      
       const C = {
-        inp: "w-full border border-sky-100 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 bg-slate-50 transition-all",
-        btn: "bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold rounded-xl px-5 py-3 transition disabled:opacity-50 active:scale-[0.98]",
-        ghost: "bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-semibold rounded-lg px-3 py-1.5 disabled:opacity-40",
-        card: "bg-white rounded-2xl border border-sky-100 shadow-sm",
-        err: "hidden mb-3 bg-rose-50 text-rose-600 text-xs font-medium rounded-xl px-3 py-2",
+        inp: "w-full border border-emerald-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-slate-50 transition-all text-slate-800 font-medium",
+        btn: "bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl px-6 py-3.5 transition disabled:opacity-50 active:scale-[0.98]",
+        ghost: "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold rounded-lg px-4 py-2 disabled:opacity-40 border border-emerald-100",
+        card: "bg-white rounded-2xl border border-emerald-100 shadow-sm",
+        err: "hidden mb-4 bg-rose-50 text-rose-700 text-sm font-semibold rounded-xl px-4 py-3 border border-rose-100",
       };
 
       function toast(m, ok = true) {
         const t = document.createElement("div");
-        t.className = `fixed top-16 left-1/2 -translate-x-1/2 z-[80] min-w-[200px] text-center px-4 py-2.5 rounded-full text-xs font-semibold text-white shadow-xl ${ok ? "bg-emerald-500" : "bg-rose-500"}`;
+        t.className = `fixed top-16 left-1/2 -translate-x-1/2 z-[80] min-w-[220px] text-center px-5 py-3 rounded-full text-sm font-bold text-white shadow-xl transition-all ${ok ? "bg-teal-600" : "bg-rose-600"}`;
         t.textContent = m;
         document.body.append(t);
-        setTimeout(() => t.remove(), 3000);
+        setTimeout(() => t.remove(), 3500);
       }
 
       function modal(html, wide) {
         const o = document.createElement("div");
-        o.className = "fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4";
-        o.innerHTML = `<div class="bg-white w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl relative">${html}</div>`;
+        o.className = "fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity";
+        o.innerHTML = `<div class="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl relative border border-emerald-50">${html}</div>`;
         document.body.append(o);
         o.addEventListener("mousedown", (e) => { if (e.target === o) o.remove(); });
         return o;
@@ -64,45 +65,43 @@
       }
 
       async function uploadImage(file) {
-        if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error("Hanya PNG/JPG/WEBP");
+        if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error("Gunakan format gambar standar (PNG/JPG)");
         const data = await compress(file);
         const r = await fetch("/api/upload", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ data, name: file.name }),
         });
         const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.error || "Upload gagal");
+        if (!r.ok) throw new Error(j.error || "Gagal mengunggah foto");
         return j.url;
       }
     </script>
   </head>
-  <body class="bg-slate-100 md:bg-sky-50/50 text-slate-700 antialiased selection:bg-sky-200 min-h-screen">
+  <body class="bg-slate-50 md:bg-emerald-50/60 text-slate-800 antialiased selection:bg-emerald-200 min-h-screen">
     
-    <!-- Responsive Container -->
-    <div class="max-w-md md:max-w-4xl mx-auto bg-white min-h-screen md:min-h-[90vh] md:my-6 md:rounded-3xl shadow-2xl shadow-sky-900/10 relative flex flex-col pb-24 md:pb-8 overflow-hidden border border-sky-50">
+    <div class="max-w-md md:max-w-4xl mx-auto bg-white min-h-screen md:min-h-[90vh] md:my-6 md:rounded-3xl shadow-2xl shadow-emerald-900/10 relative flex flex-col pb-24 md:pb-8 overflow-hidden border border-emerald-100">
       
-      <!-- Top Header Mobile & Desktop -->
-      <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-sky-100 px-4 py-3 flex items-center justify-between shadow-sm">
-        <a href="/" class="w-9 h-9 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center text-sm transition hover:bg-sky-100">
+      <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-emerald-100 px-5 py-4 flex items-center justify-between shadow-sm">
+        <a href="/" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center text-base transition hover:bg-emerald-100 shadow-sm border border-emerald-100">
           <i class="fa-solid fa-arrow-left"></i>
         </a>
-        <h1 class="font-bold text-sky-900 text-sm md:text-base tracking-tight truncate max-w-[200px] md:max-w-none">Detail Produk</h1>
-        <div class="w-9"></div>
+        <h1 class="font-extrabold text-emerald-950 text-base md:text-lg tracking-tight">Informasi Produk</h1>
+        <div class="w-10"></div>
       </header>
 
       <main id="m" class="flex-1 w-full">
-        <p class="text-center text-slate-400 py-16 text-sm">Memuat...</p>
+        <p class="text-center text-slate-500 font-medium py-20 text-base">Memuat detail produk...</p>
       </main>
 
-      <!-- Sticky Bottom Checkout Bar (Hanya tampil di Mobile View < 768px) -->
-      <div id="bottom-bar" class="hidden md:!hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-sky-100 p-3 shadow-lg">
-        <div class="max-w-md mx-auto flex items-center justify-between gap-3 px-2">
+      <!-- Bottom Checkout Bar (Mobile) -->
+      <div id="bottom-bar" class="hidden md:!hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-emerald-100 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div class="max-w-md mx-auto flex items-center justify-between gap-4 px-2">
           <div>
-            <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Harga</p>
-            <div id="cta-price" class="text-lg font-extrabold text-sky-700"></div>
+            <p class="text-xs uppercase font-extrabold text-slate-500 tracking-wide">Harga Total</p>
+            <div id="cta-price" class="text-xl font-black text-emerald-700"></div>
           </div>
-          <button id="co-mobile" class="bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold rounded-xl px-6 py-3 transition shadow-md shadow-sky-300/50 flex items-center gap-2 active:scale-[0.98]">
-            <i class="fa-solid fa-bag-shopping"></i> Checkout
+          <button id="co-mobile" class="bg-emerald-600 hover:bg-emerald-700 text-white text-base font-bold rounded-xl px-8 py-3.5 transition shadow-lg shadow-emerald-300/50 flex items-center gap-2 active:scale-[0.98]">
+            <i class="fa-solid fa-bag-shopping"></i> Beli
           </button>
         </div>
       </div>
@@ -111,7 +110,6 @@
     <script>
       const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop() || "");
       let P;
-
       (async () => {
         try {
           const r = await fetch("/api/products/" + encodeURIComponent(slug));
@@ -119,88 +117,86 @@
           if (!r.ok) throw new Error(P.error);
           render();
         } catch (e) {
-          $("#m").innerHTML = `<p class="text-center py-16 text-rose-500 text-sm font-medium">${esc(e.message)}</p>`;
+          $("#m").innerHTML = `<p class="text-center py-20 text-rose-600 text-base font-bold">${esc(e.message)}</p>`;
         }
       })();
 
       function render() {
-        document.title = P.name;
+        document.title = P.name + " - Solusi Rumahan";
         const imgs = [P.thumbnail_url, ...P.gallery];
-
         $("#m").innerHTML = `
-          <div class="p-4 md:p-8 md:grid md:grid-cols-2 md:gap-8 md:items-start">
+          <div class="p-5 md:p-10 md:grid md:grid-cols-2 md:gap-10 md:items-start">
             
-            <!-- Left Side: Product Image & Gallery (Portrait 4:5 Aspect Ratio) -->
-            <div class="bg-sky-50/50 p-3 md:p-4 rounded-2xl border border-sky-100">
-              <div class="w-full aspect-[4/5] bg-white rounded-xl border border-sky-100 shadow-sm p-2 overflow-hidden flex items-center justify-center">
-                <img id="main" src="${esc(imgs[0])}" alt="${esc(P.name)}" class="w-full h-full object-contain rounded-lg">
+            <!-- Left Side: Image Gallery -->
+            <div class="bg-emerald-50/40 p-4 md:p-5 rounded-3xl border border-emerald-100">
+              <div class="w-full aspect-[4/5] bg-white rounded-2xl border border-emerald-100 shadow-sm p-3 overflow-hidden flex items-center justify-center">
+                <img id="main" src="${esc(imgs[0])}" alt="${esc(P.name)}" class="w-full h-full object-contain rounded-xl mix-blend-multiply">
               </div>
               
               ${imgs.length > 1 ? `
-                <div class="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+                <div class="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
                   ${imgs.map((u, idx) => `
-                    <div class="th-wrap w-16 aspect-[4/5] shrink-0 bg-white border ${idx === 0 ? "border-sky-500" : "border-sky-100"} rounded-xl p-1 cursor-pointer transition hover:border-sky-400">
+                    <div class="th-wrap w-20 aspect-[4/5] shrink-0 bg-white border-2 ${idx === 0 ? "border-emerald-500 shadow-sm" : "border-emerald-100"} rounded-xl p-1.5 cursor-pointer transition hover:border-emerald-400">
                       <img src="${esc(u)}" class="th w-full h-full object-contain rounded-lg">
                     </div>
                   `).join("")}
                 </div>
               ` : ""}
             </div>
-
-            <!-- Right Side: Info, Pricing & Description -->
-            <div class="mt-5 md:mt-0 space-y-4">
+            
+            <!-- Right Side: Product Info -->
+            <div class="mt-6 md:mt-0 space-y-6">
               <div>
-                <div class="flex flex-wrap gap-1.5 mb-2">
-                  ${P.categories.map((c) => `<span class="bg-sky-100 text-sky-700 font-semibold rounded-md px-2.5 py-0.5 text-[11px]">${esc(c)}</span>`).join("")}
+                <div class="flex flex-wrap gap-2 mb-3">
+                  ${P.categories.map((c) => `<span class="bg-teal-50 text-teal-800 font-bold rounded-md px-3 py-1 text-xs border border-teal-100">${esc(c)}</span>`).join("")}
                 </div>
-                <h1 class="text-lg md:text-2xl font-extrabold text-sky-900 leading-snug">${esc(P.name)}</h1>
+                <h1 class="text-xl md:text-3xl font-black text-emerald-950 leading-tight">${esc(P.name)}</h1>
               </div>
-
-              ${P.buyers > 0 ? `<p class="text-xs font-semibold text-emerald-600 flex items-center gap-1.5"><i class="fa-solid fa-users"></i> ${P.buyers} pembeli telah checkout</p>` : ""}
-
-              <div class="bg-sky-50/80 border border-sky-100 rounded-2xl p-4 flex items-center justify-between">
+              
+              ${P.buyers > 0 ? `<p class="text-sm font-bold text-teal-700 flex items-center gap-2 bg-teal-50 inline-block px-3 py-1.5 rounded-lg w-fit border border-teal-100"><i class="fa-solid fa-users"></i> Dipercaya oleh ${P.buyers} orang</p>` : ""}
+              
+              <div class="bg-emerald-50/80 border border-emerald-200 rounded-3xl p-5 flex items-center justify-between shadow-inner">
                 <div>
-                  <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Harga Produk</p>
-                  <p class="text-xl md:text-2xl font-extrabold text-sky-700">${rp(P.final_price)}</p>
+                  <p class="text-xs uppercase font-extrabold text-slate-500 tracking-wide mb-1">Harga Resmi</p>
+                  <p class="text-2xl md:text-3xl font-black text-emerald-700">${rp(P.final_price)}</p>
                 </div>
                 ${P.discount_percent > 0 ? `
-                  <div class="text-right">
-                    <span class="text-xs md:text-sm text-slate-400 line-through">${rp(P.price)}</span>
-                    <span class="ml-1 text-xs bg-rose-100 text-rose-600 font-bold rounded-md px-2 py-0.5">-${P.discount_percent}%</span>
+                  <div class="text-right flex flex-col items-end">
+                    <span class="text-sm md:text-base text-slate-400 line-through mb-1">${rp(P.price)}</span>
+                    <span class="text-xs md:text-sm bg-rose-100 text-rose-700 font-black rounded-lg px-2.5 py-1 border border-rose-200">Diskon ${P.discount_percent}%</span>
                   </div>
                 ` : ""}
               </div>
-
-              <!-- Desktop Buy Button (Hanya tampil di Desktop view >= 768px) -->
-              <div class="hidden md:block pt-2">
-                <button id="co-desktop" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl py-3.5 shadow-lg shadow-sky-200 transition flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-bag-shopping"></i> Checkout Pesanan
+              
+              <!-- Desktop Button -->
+              <div class="hidden md:block pt-3">
+                <button id="co-desktop" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg rounded-2xl py-4 shadow-xl shadow-emerald-200 transition flex items-center justify-center gap-3">
+                  <i class="fa-solid fa-bag-shopping"></i> Pesan Sekarang
                 </button>
               </div>
-
-              <!-- Product Description -->
-              <div class="pt-2">
-                <h2 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Deskripsi Produk</h2>
-                <div class="${C.card} p-4 ql-snow">
-                  <div class="ql-editor !p-0 text-xs md:text-sm text-slate-600 leading-relaxed">${P.description || '<p class="text-slate-400">Tidak ada deskripsi.</p>'}</div>
+              
+              <!-- Description -->
+              <div class="pt-4 border-t border-emerald-100">
+                <h2 class="text-sm font-extrabold uppercase text-emerald-900 tracking-wide mb-3 flex items-center gap-2"><i class="fa-solid fa-book-open text-emerald-500"></i> Detail Penjelasan</h2>
+                <div class="${C.card} p-5 ql-snow bg-slate-50/50">
+                  <div class="ql-editor !p-0 text-sm md:text-base text-slate-700 font-medium leading-loose">
+                    ${P.description || '<p class="text-slate-500">Belum ada keterangan rinci.</p>'}
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
         `;
 
-        // Mobile Bottom CTA Setup
         $("#cta-price").innerHTML = `${rp(P.final_price)}`;
         $("#bottom-bar").classList.remove("hidden");
 
-        // Thumbnail Click Events
         const thWraps = document.querySelectorAll(".th-wrap");
         document.querySelectorAll(".th").forEach((i, idx) => {
           i.parentElement.onclick = () => {
             $("#main").src = i.src;
-            thWraps.forEach((w) => w.classList.replace("border-sky-500", "border-sky-100"));
-            thWraps[idx].classList.replace("border-sky-100", "border-sky-500");
+            thWraps.forEach((w) => w.className = w.className.replace("border-emerald-500 shadow-sm", "border-emerald-100"));
+            thWraps[idx].className = thWraps[idx].className.replace("border-emerald-100", "border-emerald-500 shadow-sm");
           };
         });
 
@@ -211,126 +207,109 @@
 
       async function checkout() {
         let pms = [], proof = "";
-        try {
-          pms = await (await fetch("/api/payment-methods")).json();
-        } catch (e) {
-          return toast("Gagal memuat metode pembayaran", false);
-        }
+        try { pms = await (await fetch("/api/payment-methods")).json(); } 
+        catch (e) { return toast("Gagal memuat bank tujuan", false); }
         
         const m = modal(
-          `<div class="flex items-center justify-between mb-3 border-b border-sky-100 pb-2">
-             <h2 class="font-extrabold text-sky-900 text-base">Checkout Pesanan</h2>
-             <button data-x class="text-slate-400 hover:text-slate-600 p-1 text-lg">&times;</button>
+          `<div class="flex items-center justify-between mb-4 border-b border-emerald-100 pb-3">
+             <h2 class="font-black text-emerald-950 text-lg">Form Pemesanan</h2>
+             <button data-x class="text-slate-400 hover:text-rose-500 p-2 text-2xl leading-none transition">&times;</button>
            </div>
            <div data-er class="${C.err}"></div>
            
-           <div class="flex gap-3 items-center bg-sky-50/70 border border-sky-100 rounded-2xl p-3 mb-4">
-             <div class="w-14 aspect-[4/5] bg-white rounded-xl border border-sky-100 p-0.5 shrink-0 overflow-hidden">
+           <div class="flex gap-4 items-center bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-5 shadow-inner">
+             <div class="w-16 aspect-[4/5] bg-white rounded-xl border border-emerald-100 p-1 shrink-0 overflow-hidden shadow-sm">
                <img src="${esc(P.thumbnail_url)}" class="w-full h-full object-contain rounded-lg">
              </div>
              <div class="min-w-0 flex-1">
-               <p class="font-bold text-sky-900 text-xs truncate">${esc(P.name)}</p>
-               <p class="text-sky-700 font-extrabold text-sm mt-0.5">${rp(P.final_price)}</p>
+               <p class="font-extrabold text-emerald-950 text-sm leading-snug line-clamp-2">${esc(P.name)}</p>
+               <p class="text-emerald-700 font-black text-base mt-1">${rp(P.final_price)}</p>
              </div>
            </div>
-
-           <p class="text-[11px] bg-amber-50 text-amber-700 border border-amber-100 rounded-xl p-2.5 mb-4 leading-snug">
-             <i class="fa-solid fa-circle-info mr-1"></i> Silakan buka di browser eksternal (Chrome / Safari) agar transaksi berjalan lancar.
+           
+           <p class="text-xs bg-amber-50 text-amber-800 border border-amber-200 font-medium rounded-xl p-3.5 mb-5 leading-relaxed shadow-sm">
+             <i class="fa-solid fa-shield-halved mr-1.5 text-amber-500"></i> Pastikan Anda mengisi nama dan nomor WhatsApp yang aktif agar pesanan cepat diproses.
            </p>
-
-           <div class="space-y-3 text-xs">
-             <label class="block font-semibold text-slate-600">
-               Nama Pembeli
-               <input name="buyer_name" maxlength="100" placeholder="Nama lengkap Anda" class="${C.inp} mt-1">
+           
+           <div class="space-y-4 text-sm">
+             <label class="block font-bold text-slate-700">Nama Lengkap
+               <input name="buyer_name" maxlength="100" placeholder="Misal: Bapak Budi / Ibu Siti" class="${C.inp} mt-1.5 shadow-sm">
              </label>
-             <label class="block font-semibold text-slate-600">
-               Nomor WhatsApp
-               <input name="whatsapp" inputmode="tel" placeholder="08xxxxxxxxxx" class="${C.inp} mt-1">
+             <label class="block font-bold text-slate-700">Nomor WhatsApp
+               <input name="whatsapp" inputmode="tel" placeholder="08xxxxxxxxxx" class="${C.inp} mt-1.5 shadow-sm">
              </label>
-             <label class="block font-semibold text-slate-600">
-               Email (opsional)
-               <input name="email" type="email" placeholder="email@domain.com" class="${C.inp} mt-1">
+             <label class="block font-bold text-slate-700">Email <span class="text-slate-400 font-normal">(Tidak Wajib)</span>
+               <input name="email" type="email" placeholder="email@contoh.com" class="${C.inp} mt-1.5 shadow-sm">
              </label>
-
-             <div>
-               <span class="block font-semibold text-slate-600 mb-1">Metode Pembayaran</span>
-               <div class="space-y-2">
-                 ${
-                   pms
-                     .map(
-                       (p) => `<label class="flex items-start gap-2.5 border border-sky-100 rounded-xl p-3 bg-white cursor-pointer hover:border-sky-300 transition">
-                       <input type="radio" name="pm" value="${p.id}" class="mt-0.5 accent-sky-500">
-                       <div class="flex-1 min-w-0">
-                         <b class="text-sky-900 text-xs block">${esc(p.bank_name)}</b>
-                         <span class="text-slate-700 font-mono text-xs block mt-0.5">${esc(p.account_number)}</span>
-                         <span class="text-[10px] text-slate-400 block mt-0.5">a.n ${esc(p.account_holder)}</span>
-                       </div>
-                       <button type="button" data-c="${esc(p.account_number)}" class="${C.ghost} text-[10px] shrink-0">Salin</button>
-                     </label>`,
-                     )
-                     .join("") ||
-                   '<p class="text-slate-400 text-xs">Belum ada rekening tersedia.</p>'
-                 }
+             
+             <div class="pt-2">
+               <span class="block font-bold text-slate-700 mb-2">Pilih Rekening Tujuan Transfer</span>
+               <div class="space-y-2.5">
+                 ${pms.map((p) => `
+                   <label class="flex items-start gap-3 border-2 border-slate-100 rounded-2xl p-4 bg-white cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/30 transition shadow-sm">
+                     <input type="radio" name="pm" value="${p.id}" class="mt-1 w-4 h-4 accent-emerald-600">
+                     <div class="flex-1 min-w-0">
+                       <b class="text-emerald-950 text-sm block">${esc(p.bank_name)}</b>
+                       <span class="text-slate-800 font-mono text-base font-bold tracking-wider block mt-1">${esc(p.account_number)}</span>
+                       <span class="text-xs text-slate-500 font-medium block mt-1">Atas nama: <strong class="text-slate-700">${esc(p.account_holder)}</strong></span>
+                     </div>
+                     <button type="button" data-c="${esc(p.account_number)}" class="${C.ghost} shrink-0"><i class="fa-regular fa-copy mr-1"></i> Salin</button>
+                   </label>`).join("") || '<p class="text-slate-400 text-sm font-medium">Belum ada rekening tujuan tersedia.</p>'}
                </div>
              </div>
-
-             <div>
-               <span class="block font-semibold text-slate-600 mb-1">Upload Bukti Transfer</span>
-               <input id="pf" type="file" accept="image/png,image/jpeg,image/webp" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
-               <div id="pp-container" class="hidden mt-2 border border-sky-100 rounded-xl p-1 bg-sky-50/50">
-                 <img id="pp" class="w-full aspect-[4/5] object-contain rounded-lg">
+             
+             <div class="pt-2">
+               <span class="block font-bold text-slate-700 mb-2">Unggah Foto Bukti Transfer</span>
+               <div class="border-2 border-dashed border-emerald-200 bg-emerald-50/50 rounded-2xl p-4 text-center">
+                 <input id="pf" type="file" accept="image/png,image/jpeg,image/webp" class="block w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer">
+               </div>
+               <div id="pp-container" class="hidden mt-3 border-2 border-emerald-100 rounded-2xl p-2 bg-white shadow-sm">
+                 <img id="pp" class="w-full max-h-64 object-contain rounded-xl">
                </div>
              </div>
            </div>
-
-           <div class="flex gap-2 justify-end mt-5 pt-3 border-t border-sky-100">
-             <button data-x class="${C.ghost}">Batal</button>
-             <button data-s class="${C.btn}">Kirim Pesanan</button>
+           
+           <div class="flex gap-3 justify-end mt-8 pt-4 border-t border-emerald-100">
+             <button data-x class="${C.ghost} !px-6 !py-3 !text-sm">Kembali</button>
+             <button data-s class="${C.btn} w-full md:w-auto">Kirim Pemesanan</button>
            </div>`,
-          true,
+          true
         );
 
         const go = $("[data-s]", m), f = (n) => $(`[name=${n}]`, m);
         $("[data-x]", m).onclick = () => m.remove();
-
+        
         m.addEventListener("click", (e) => {
           const b = e.target.closest("[data-c]");
           if (b) {
             e.preventDefault();
-            navigator.clipboard.writeText(b.dataset.c).then(
-              () => toast("Nomor rekening disalin"),
-              () => toast("Gagal menyalin", false),
-            );
+            navigator.clipboard.writeText(b.dataset.c).then(() => toast("Nomor rekening disalin ke HP Anda"), () => toast("Gagal menyalin", false));
           }
         });
 
         $("#pf", m).onchange = async (e) => {
           const file = e.target.files[0];
           if (!file) return;
-          go.disabled = true;
-          go.textContent = "Mengunggah...";
+          go.disabled = true; go.textContent = "Mengunggah foto...";
           try {
             proof = await uploadImage(file);
             const i = $("#pp", m);
             i.src = proof;
             $("#pp-container", m).classList.remove("hidden");
-          } catch (x) {
-            showErr(m, x.message);
-          }
-          go.disabled = false;
-          go.textContent = "Kirim Pesanan";
+          } catch (x) { showErr(m, x.message); }
+          go.disabled = false; go.textContent = "Kirim Pemesanan";
         };
 
         go.onclick = async () => {
           const pm = $("[name=pm]:checked", m);
-          if (!pm) return showErr(m, "Pilih metode pembayaran");
-          if (!proof) return showErr(m, "Upload bukti pembayaran dulu");
-          go.disabled = true;
-          go.textContent = "Memproses...";
+          if (!pm) return showErr(m, "Silakan pilih rekening bank tujuan transfer.");
+          if (!proof) return showErr(m, "Harap unggah foto bukti transfer Anda.");
+          if (!f("buyer_name").value.trim() || !f("whatsapp").value.trim()) return showErr(m, "Nama dan Nomor WA wajib diisi.");
+          
+          go.disabled = true; go.textContent = "Sedang memproses...";
           try {
             const r = await fetch("/api/checkout", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+              method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 slug: P.slug,
                 buyer_name: f("buyer_name").value,
@@ -340,14 +319,13 @@
                 proof_url: proof,
               }),
             });
-            const j = await r.json().catch(() => ({ error: "Terlalu banyak percobaan, coba lagi nanti" }));
+            const j = await r.json().catch(() => ({ error: "Sistem sibuk, mohon coba beberapa saat lagi." }));
             if (!r.ok) throw new Error(j.error);
-            if (!String(j.redirect).startsWith("/")) throw new Error("Respons tidak valid");
+            if (!String(j.redirect).startsWith("/")) throw new Error("Terjadi kendala pada sistem.");
             location.href = j.redirect;
           } catch (x) {
             showErr(m, x.message);
-            go.disabled = false;
-            go.textContent = "Kirim Pesanan";
+            go.disabled = false; go.textContent = "Kirim Pemesanan";
           }
         };
       }

@@ -3,91 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Dashboard · Admin</title>
+    <title>Dashboard Admin | Solusi Rumahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; }</style>
+    
     <script>
       const $ = (s, r = document) => r.querySelector(s);
-      const esc = (s) =>
-        String(s ?? "").replace(
-          /[&<>"']/g,
-          (c) =>
-            ({
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;",
-            })[c],
-        );
-      const rp = (n) => "Rp" + Number(n).toLocaleString("id-ID");
+      const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;","<": "&lt;",">": "&gt;",'"': "&quot;","'": "&#39;"})[c]);
+      const rp = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
+
       const C = {
-        inp: "w-full border border-sky-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white",
-        btn: "bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl px-4 py-2 transition disabled:opacity-50",
-        ghost:
-          "border border-sky-200 text-sky-700 hover:bg-sky-50 text-xs rounded-lg px-3 py-1.5 disabled:opacity-40",
-        card: "bg-white rounded-2xl border border-sky-100 shadow-sm",
-        err: "hidden mb-3 bg-rose-50 text-rose-600 text-sm rounded-xl px-3 py-2",
+        inp: "w-full border border-emerald-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-slate-50 transition-all font-medium text-slate-800",
+        btn: "bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl px-5 py-2.5 transition disabled:opacity-50",
+        ghost: "border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50 text-xs font-bold rounded-lg px-3 py-1.5 disabled:opacity-40 transition",
+        card: "bg-white rounded-3xl border border-emerald-100 shadow-sm",
+        err: "hidden mb-4 bg-rose-50 text-rose-700 text-sm font-bold rounded-xl px-4 py-3 border border-rose-100",
       };
+
       function toast(m, ok = true) {
         const t = document.createElement("div");
-        t.className = `fixed top-4 right-4 z-[70] max-w-xs px-4 py-3 rounded-xl text-sm text-white shadow-lg ${ok ? "bg-emerald-500" : "bg-rose-500"}`;
+        t.className = `fixed top-6 right-6 z-[70] max-w-xs px-5 py-3.5 rounded-2xl text-sm font-bold text-white shadow-xl transition-all ${ok ? "bg-teal-600" : "bg-rose-600"}`;
         t.textContent = m;
         document.body.append(t);
         setTimeout(() => t.remove(), 3500);
-      }
-      function modal(html, wide) {
-        const o = document.createElement("div");
-        o.className =
-          "fixed inset-0 z-50 bg-slate-900/40 flex items-end sm:items-center justify-center sm:p-4";
-        o.innerHTML = `<div class="bg-white w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-md"} max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5">${html}</div>`;
-        document.body.append(o);
-        o.addEventListener("mousedown", (e) => {
-          if (e.target === o) o.remove();
-        });
-        return o;
-      }
-      const showErr = (m, msg) => {
-        const e = $("[data-er]", m);
-        e.textContent = msg;
-        e.classList.remove("hidden");
-      };
-      function compress(file, max = 1600) {
-        return new Promise((ok, no) => {
-          const img = new Image();
-          img.onload = () => {
-            const k = Math.min(1, max / Math.max(img.width, img.height)),
-              c = document.createElement("canvas");
-            c.width = Math.round(img.width * k);
-            c.height = Math.round(img.height * k);
-            c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-            let q = 0.9,
-              d;
-            do {
-              d = c.toDataURL("image/jpeg", q);
-              q -= 0.1;
-            } while (d.length > 2.6e6 && q > 0.2);
-            d.length > 2.9e6 ? no(new Error("Gambar terlalu besar")) : ok(d);
-          };
-          img.onerror = () => no(new Error("File bukan gambar valid"));
-          img.src = URL.createObjectURL(file);
-        });
-      }
-      async function uploadImage(file) {
-        if (!/^image\/(png|jpe?g|webp)$/.test(file.type))
-          throw new Error("Hanya PNG/JPG/WEBP");
-        const data = await compress(file);
-        const r = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data, name: file.name }),
-        });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.error || "Upload gagal");
-        return j.url;
       }
 
       async function api(url, method = "GET", body) {
@@ -96,148 +36,191 @@
           headers: body ? { "Content-Type": "application/json" } : {},
           body: body ? JSON.stringify(body) : undefined,
         });
-        if (r.status === 401) {
-          location.href = "/signin";
-          throw new Error("Sesi berakhir");
-        }
+        if (r.status === 401) { location.href = "/signin"; throw new Error("Sesi berakhir"); }
         const j = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          const e = new Error(j.error || "Terjadi kesalahan");
-          e.status = r.status;
-          throw e;
-        }
+        if (!r.ok) { const e = new Error(j.error || "Terjadi kesalahan"); e.status = r.status; throw e; }
         return j;
       }
+
       async function logout() {
         await fetch("/api/auth/logout", { method: "POST" });
         location.href = "/signin";
       }
+
       const NAV = [
-        ["dashboard", "fa-chart-line", "Dashboard"],
-        ["product-management", "fa-box", "Produk"],
-        ["customer-order", "fa-receipt", "Order"],
-        ["payment-method", "fa-credit-card", "Rekening"],
+        ["dashboard", "fa-chart-pie", "Dashboard"],
+        ["product-management", "fa-boxes-stacked", "Katalog Produk"],
+        ["customer-order", "fa-receipt", "Pesanan"],
+        ["payment-method", "fa-building-columns", "Rekening Bank"],
         ["testimonial", "fa-comments", "Testimoni"],
       ];
+
       function shell(active) {
         const side = NAV.map(
-          ([n, i, t]) =>
-            `<a href="/${n}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm ${n === active ? "bg-sky-100 text-sky-800 font-bold" : "hover:bg-sky-50"}"><i class="fa-solid ${i} w-4"></i>${t}</a>`,
+          ([n, i, t]) => `<a href="/${n}" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${n === active ? "bg-emerald-100/60 text-emerald-800" : "text-slate-600 hover:bg-slate-50 hover:text-emerald-700"}"><i class="fa-solid ${i} w-5 text-center"></i>${t}</a>`,
         ).join("");
         const bot = NAV.map(
-          ([n, i, t]) =>
-            `<a href="/${n}" class="flex-1 py-2 text-center text-[10px] ${n === active ? "text-sky-600 font-bold" : "text-slate-400"}"><i class="fa-solid ${i} block text-base mb-0.5"></i>${t}</a>`,
+          ([n, i, t]) => `<a href="/${n}" class="flex-1 py-3 text-center text-[10px] font-bold transition-all ${n === active ? "text-emerald-700 bg-emerald-50/50" : "text-slate-400"}"><i class="fa-solid ${i} block text-lg mb-1"></i>${t}</a>`,
         ).join("");
-        document.body.classList.add(
-          "bg-sky-50",
-          "text-slate-700",
-          "min-h-screen",
-          "md:ml-56",
-          "pb-20",
-          "md:pb-0",
-        );
+        
+        document.body.classList.add("bg-slate-50", "text-slate-800", "min-h-screen", "md:ml-64", "pb-20", "md:pb-0");
         document.body.insertAdjacentHTML(
           "afterbegin",
-          `<aside class="hidden md:flex fixed inset-y-0 left-0 w-56 bg-white border-r border-sky-100 flex-col p-4 gap-1"><b class="text-sky-900 text-lg mb-4">Skills Admin</b>${side}<button onclick="logout()" class="mt-auto text-left px-3 py-2 text-sm text-rose-500"><i class="fa-solid fa-right-from-bracket mr-2"></i>Logout</button></aside>
-  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-sky-100 flex">${bot}<button onclick="logout()" class="flex-1 py-2 text-center text-[10px] text-rose-500"><i class="fa-solid fa-right-from-bracket block text-base mb-0.5"></i>Keluar</button></nav>`,
+          `<aside class="hidden md:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-emerald-100 flex-col p-5 gap-2 shadow-sm">
+            <div class="flex items-center gap-3 mb-6 px-2">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg"><i class="fa-solid fa-leaf"></i></div>
+              <b class="text-emerald-950 text-xl tracking-tight">Admin Area</b>
+            </div>
+            ${side}
+            <button onclick="logout()" class="mt-auto text-left px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-2xl transition"><i class="fa-solid fa-power-off mr-2"></i>Keluar Sistem</button>
+          </aside>
+          <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-emerald-100 flex shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            ${bot}
+            <button onclick="logout()" class="flex-1 py-3 text-center text-[10px] font-bold text-rose-500"><i class="fa-solid fa-power-off block text-lg mb-1"></i>Keluar</button>
+          </nav>`,
         );
-      }
-      const confirmBox = (msg) =>
-        new Promise((res) => {
-          const m = modal(
-            `<p class="mb-4 text-sm">${esc(msg)}</p><div class="flex gap-2 justify-end"><button data-n class="${C.ghost}">Batal</button><button data-y class="${C.btn}">Ya, lanjut</button></div>`,
-          );
-          $("[data-n]", m).onclick = () => {
-            m.remove();
-            res(false);
-          };
-          $("[data-y]", m).onclick = () => {
-            m.remove();
-            res(true);
-          };
-        });
-      function pager(el, d, go) {
-        el.innerHTML = `<div class="flex items-center justify-between mt-4 text-sm"><button data-p class="${C.ghost}" ${d.page <= 1 ? "disabled" : ""}>&laquo; Previous</button><span class="text-slate-500">Hal ${d.page} / ${d.pages} · ${d.total} data</span><button data-n class="${C.ghost}" ${d.page >= d.pages ? "disabled" : ""}>Next &raquo;</button></div>`;
-        $("[data-p]", el).onclick = () => go(d.page - 1);
-        $("[data-n]", el).onclick = () => go(d.page + 1);
-      }
-      function simpleForm(title, fields, d, save) {
-        d = d || {};
-        const m = modal(
-          `<h2 class="font-bold text-sky-900 mb-3">${esc(title)}</h2><div data-er class="${C.err}"></div>${fields.map(([k, l, t]) => `<label class="block text-sm mb-3">${esc(l)}${t === "textarea" ? `<textarea name="${k}" rows="4" maxlength="500" class="${C.inp} mt-1">${esc(d[k])}</textarea>` : `<input name="${k}" maxlength="80" value="${esc(d[k])}" class="${C.inp} mt-1">`}</label>`).join("")}<div class="flex gap-2 justify-end"><button data-x class="${C.ghost}">Batal</button><button data-s class="${C.btn}">Simpan</button></div>`,
-        );
-        $("[data-x]", m).onclick = () => m.remove();
-        $("[data-s]", m).onclick = async (e) => {
-          const b = e.target;
-          b.disabled = true;
-          const body = {};
-          fields.forEach(([k]) => (body[k] = $(`[name=${k}]`, m).value));
-          try {
-            await save(body);
-            m.remove();
-          } catch (x) {
-            showErr(m, x.message);
-            b.disabled = false;
-          }
-        };
       }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1"></script>
   </head>
   <body>
-    <main class="max-w-6xl mx-auto p-4">
-      <h1 class="text-xl font-extrabold text-sky-900 mb-4">Dashboard</h1>
-      <div id="cards" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4"></div>
-      <div class="bg-white rounded-2xl border border-sky-100 shadow-sm p-4">
-        <div id="tabs" class="flex gap-2 mb-3"></div>
-        <div id="chart"></div>
+    <main class="max-w-7xl mx-auto p-5 md:p-8">
+      <div class="mb-8">
+        <h1 class="text-2xl font-black text-emerald-950 tracking-tight">Ringkasan Sistem</h1>
+        <p class="text-sm text-slate-500 font-medium mt-1">Pantau performa penjualan dan produk Anda hari ini.</p>
+      </div>
+      
+      <!-- Top Metric Cards -->
+      <div id="cards" class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+        <!-- Cards injected via JS -->
+      </div>
+      
+      <!-- Charts Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        
+        <!-- Left: Line/Area Chart -->
+        <div class="lg:col-span-2 bg-white rounded-3xl border border-emerald-100 shadow-sm p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 class="text-lg font-black text-emerald-950"><i class="fa-solid fa-chart-line text-emerald-500 mr-2"></i>Grafik Pendapatan</h2>
+            <div id="tabs" class="flex gap-2 bg-slate-50 p-1 rounded-2xl border border-slate-100"></div>
+          </div>
+          <div id="chart" class="w-full"></div>
+        </div>
+
+        <!-- Right: Pie/Donut Chart (Top Products) -->
+        <div class="bg-white rounded-3xl border border-emerald-100 shadow-sm p-6 flex flex-col">
+          <h2 class="text-lg font-black text-emerald-950 mb-2"><i class="fa-solid fa-ranking-star text-amber-400 mr-2"></i>Produk Terlaris</h2>
+          <p class="text-xs font-bold text-slate-400 mb-6">Berdasarkan total pesanan & data valid</p>
+          <div class="flex-1 flex items-center justify-center">
+            <div id="pie-chart" class="w-full"></div>
+          </div>
+        </div>
+        
       </div>
     </main>
+
     <script>
       shell("dashboard");
+      
       (async () => {
         try {
+          // 1. Fetch Statistik Umum Dashboard
           const s = await api("/api/admin/stats");
+          
+          // 2. Fetch Top 5 Produk Terlaris (Endpoint publik secara default mengurutkan 'buyers DESC')
+          let topProducts = [];
+          try {
+            const prodRes = await fetch("/api/products?limit=5");
+            const prodData = await prodRes.json();
+            topProducts = prodData.items || [];
+          } catch (err) {
+            console.warn("Gagal memuat chart produk terlaris");
+          }
+
+          // 3. Render Metric Cards
           $("#cards").innerHTML = [
-            ["Total omzet", rp(s.omzet), "fa-wallet"],
-            ["Total pembeli", s.buyers, "fa-users"],
-            ["Total produk", s.products, "fa-box"],
-          ]
-            .map(
-              ([t, v, i]) =>
-                `<div class="${C.card} p-4 flex items-center gap-3"><div class="w-11 h-11 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center"><i class="fa-solid ${i}"></i></div><div><p class="text-xs text-slate-500">${t}</p><p class="text-xl font-extrabold text-sky-900">${esc(v)}</p></div></div>`,
-            )
-            .join("");
+            ["Total Omzet Valid", rp(s.omzet || 0), "fa-wallet", "bg-teal-100 text-teal-600"],
+            ["Total Pelanggan", (s.buyers || 0) + " Orang", "fa-users", "bg-emerald-100 text-emerald-600"],
+            ["Katalog Tersedia", (s.products || 0) + " Produk", "fa-boxes-stacked", "bg-amber-100 text-amber-600"],
+          ].map(([t, v, i, c]) => `
+            <div class="${C.card} p-5 flex items-center gap-4 transition-transform hover:-translate-y-1">
+              <div class="w-14 h-14 rounded-2xl ${c} flex items-center justify-center text-2xl shadow-inner shrink-0">
+                <i class="fa-solid ${i}"></i>
+              </div>
+              <div class="overflow-hidden">
+                <p class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-1 truncate">${t}</p>
+                <p class="text-2xl font-black text-emerald-950 truncate" title="${esc(v)}">${esc(v)}</p>
+              </div>
+            </div>
+          `).join("");
+
+          // 4. Render Grafik Area (Pendapatan)
           const T = { daily: "Harian", weekly: "Mingguan", monthly: "Bulanan" };
-          let ch;
-          const draw = (k) => {
-            $("#tabs").innerHTML = Object.entries(T)
-              .map(
-                ([x, l]) =>
-                  `<button data-k="${x}" class="px-3 py-1.5 rounded-lg text-sm ${x === k ? "bg-sky-500 text-white" : "bg-sky-50 text-sky-700"}">${l}</button>`,
-              )
-              .join("");
-            const d = s[k];
-            ch && ch.destroy();
-            ch = new ApexCharts($("#chart"), {
-              chart: { type: "area", height: 320, toolbar: { show: false } },
-              series: [{ name: "Omzet", data: d.map((x) => x.omzet) }],
-              xaxis: { categories: d.map((x) => x.label) },
-              yaxis: { labels: { formatter: (v) => rp(v) } },
-              colors: ["#0ea5e9"],
-              stroke: { curve: "smooth" },
+          let chArea;
+          
+          const drawArea = (k) => {
+            $("#tabs").innerHTML = Object.entries(T).map(([x, l]) =>
+              `<button data-k="${x}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all ${x === k ? "bg-emerald-600 text-white shadow-md shadow-emerald-200" : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"}">${l}</button>`
+            ).join("");
+
+            const d = s[k] || [];
+            chArea && chArea.destroy();
+            
+            chArea = new ApexCharts($("#chart"), {
+              chart: { type: "area", height: 300, toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans, sans-serif' },
+              series: [{ name: "Omzet", data: d.map((x) => x.omzet || 0) }],
+              xaxis: { 
+                categories: d.map((x) => x.label || ''), 
+                labels: { style: { colors: '#64748b', fontWeight: 600, fontSize: '11px' } } 
+              },
+              yaxis: { 
+                labels: { formatter: (v) => rp(v), style: { colors: '#64748b', fontWeight: 600, fontSize: '11px' } } 
+              },
+              colors: ["#059669"],
+              fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
+              stroke: { curve: "smooth", width: 4 },
               dataLabels: { enabled: false },
-              noData: { text: "Belum ada data" },
+              tooltip: { theme: 'light', y: { formatter: (v) => rp(v) } },
+              noData: { text: "Belum ada rekaman penjualan", style: { color: "#94a3b8", fontSize: "14px", fontFamily: 'Plus Jakarta Sans' } },
             });
-            ch.render();
+            chArea.render();
           };
+
           $("#tabs").onclick = (e) => {
             const b = e.target.closest("[data-k]");
-            if (b) draw(b.dataset.k);
+            if (b) drawArea(b.dataset.k);
           };
-          draw("daily");
+          drawArea("daily");
+
+          // 5. Render Grafik Pie / Donut (Top Produk)
+          const pieOptions = {
+            chart: { type: 'donut', height: 320, fontFamily: 'Plus Jakarta Sans, sans-serif' },
+            series: topProducts.length > 0 ? topProducts.map(p => p.buyers || 0) : [],
+            labels: topProducts.length > 0 ? topProducts.map(p => p.name || 'Produk') : [],
+            colors: ['#059669', '#0d9488', '#10b981', '#34d399', '#f59e0b'],
+            stroke: { width: 0 },
+            dataLabels: { enabled: false },
+            plotOptions: { 
+              pie: { 
+                donut: { 
+                  size: '75%', 
+                  labels: { 
+                    show: true, 
+                    name: { fontSize: '12px', fontWeight: 600, color: '#64748b' },
+                    value: { fontSize: '24px', fontWeight: 900, color: '#022c22', formatter: (val) => val + " Terjual" }
+                  } 
+                } 
+              } 
+            },
+            legend: { show: true, position: 'bottom', fontSize: '12px', fontWeight: 600, labels: { colors: '#334155' } },
+            tooltip: { y: { formatter: (val) => val + " Pembeli" } },
+            noData: { text: "Data produk belum memadai", style: { color: "#94a3b8", fontSize: "13px", fontWeight: 600, fontFamily: 'Plus Jakarta Sans' } },
+          };
+          
+          new ApexCharts($("#pie-chart"), pieOptions).render();
+
         } catch (e) {
-          toast(e.message, false);
+          toast("Gagal memuat data dashboard: " + e.message, false);
         }
       })();
     </script>
